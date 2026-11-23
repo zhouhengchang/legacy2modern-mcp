@@ -11,6 +11,8 @@
 import json
 import urllib.request
 
+__version__ = "1.0.0"
+
 TOOLS = {
     "legacy-code-audit": 2,
     "java8-to-springboot3": 10,
