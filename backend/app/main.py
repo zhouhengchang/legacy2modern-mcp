@@ -60,13 +60,16 @@ MCP_TOOLS = {
 
 
 def db():
-    conn = sqlite3.connect(DB_PATH)
+    # busy_timeout 让并发写等待而非立即抛 "database is locked"
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
 
 def init_db():
     with db() as c:
+        c.execute("PRAGMA journal_mode=WAL")
         c.execute("""CREATE TABLE IF NOT EXISTS users(
             id TEXT PRIMARY KEY, email TEXT UNIQUE, token TEXT UNIQUE,
             credits INTEGER DEFAULT 100, created_at REAL)""")
@@ -77,6 +80,20 @@ def init_db():
             id TEXT PRIMARY KEY, user_id TEXT, tool TEXT, cost INTEGER,
             result TEXT, created_at REAL)""")
         c.commit()
+
+
+def try_charge(user_id: str, cost: int) -> bool:
+    """原子扣点：仅当余额充足时扣减，返回是否成功。
+
+    单条条件 UPDATE 在 SQLite 写事务中串行执行，避免并发下
+    「先读余额→检查→扣点」竞态导致的超扣 / 负余额（资损）。
+    """
+    with db() as c:
+        cur = c.execute(
+            "UPDATE users SET credits=credits-? WHERE id=? AND credits>=?",
+            (cost, user_id, cost))
+        c.commit()
+        return cur.rowcount == 1
 
 
 def auth(authorization: str = Header(None)):
@@ -161,7 +178,8 @@ def call_ai(code: str, from_stack: str, to_stack: str) -> str:
 
 @app.post("/refactor")
 def refactor(body: RefactorIn, user: dict = Depends(auth)):
-    if user["credits"] < COST_PER_REFACTOR:
+    # 原子扣点：并发下仅余额充足者成功，杜绝超扣 / 负余额
+    if not try_charge(user["id"], COST_PER_REFACTOR):
         raise HTTPException(402, "Insufficient credits")
     jid = uuid.uuid4().hex
     result = call_ai(body.source_code, body.from_stack, body.to_stack)
@@ -169,8 +187,6 @@ def refactor(body: RefactorIn, user: dict = Depends(auth)):
         c.execute("INSERT INTO jobs VALUES(?,?,?,?,?,?,?,?)",
                   (jid, user["id"], body.source_code, body.to_stack,
                    "done", result, COST_PER_REFACTOR, time.time()))
-        c.execute("UPDATE users SET credits=credits-? WHERE id=?",
-                  (COST_PER_REFACTOR, user["id"]))
         c.commit()
         left = c.execute("SELECT credits FROM users WHERE id=?", (user["id"],)).fetchone()[0]
     return {"job_id": jid, "status": "done", "result": result, "credits_left": left}
@@ -312,8 +328,9 @@ def mcp_invoke(body: McpInvokeIn, user: dict = Depends(auth)):
     if body.tool not in MCP_TOOLS:
         raise HTTPException(404, f"Unknown MCP tool: {body.tool}")
     cost = MCP_TOOLS[body.tool]["cost"]
-    if user["credits"] < cost:
-        raise HTTPException(402, f"Insufficient credits: need {cost}, have {user['credits']}")
+    # 原子扣点：并发安全，杜绝超扣 / 负余额
+    if not try_charge(user["id"], cost):
+        raise HTTPException(402, f"Insufficient credits: need {cost}")
     code = str(body.params.get("code", ""))
     result = _analyze(body.tool, code, body.params)
     call_id = uuid.uuid4().hex
@@ -321,8 +338,6 @@ def mcp_invoke(body: McpInvokeIn, user: dict = Depends(auth)):
         c.execute("INSERT INTO mcp_calls VALUES(?,?,?,?,?,?)",
                   (call_id, user["id"], body.tool, cost,
                    json.dumps(result, ensure_ascii=False), time.time()))
-        c.execute("UPDATE users SET credits=credits-? WHERE id=?",
-                  (cost, user["id"]))
         c.commit()
         left = c.execute("SELECT credits FROM users WHERE id=?", (user["id"],)).fetchone()[0]
     return {"call_id": call_id, "tool": body.tool, "result": result,

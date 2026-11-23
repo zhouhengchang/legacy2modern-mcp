@@ -39,7 +39,7 @@
 Legacy2Modern/
 ├── backend/               # FastAPI 计费网关 + SQLite
 │   ├── app/main.py        # 鉴权 / 计费 / MCP 工具 / AI 可插拔
-│   ├── tests/             # 17 个自动化测试（pytest）
+│   ├── tests/             # 19 个自动化测试（pytest，含并发竞态）
 │   ├── requirements*.txt  # 运行 / 开发依赖
 │   └── Dockerfile
 ├── mcp-server/            # MCP Server（stdio + HTTP）
@@ -111,7 +111,7 @@ print(r["credits_left"])
 
 ```bash
 pip install -r backend/requirements-dev.txt
-cd backend && python -m pytest tests/ -q   # 17 passed
+cd backend && python -m pytest tests/ -q   # 19 passed
 ```
 
 CI（`.github/workflows/test.yml`）在每次 push 自动运行同一套测试。
