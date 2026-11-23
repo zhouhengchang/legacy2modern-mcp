@@ -23,9 +23,6 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Ensure npm supports OIDC trusted publishing
-        run: npm install -g npm@latest
-
       - name: Render namespace
         working-directory: mcp-server
         run: |
