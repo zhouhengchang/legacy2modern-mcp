@@ -1,7 +1,8 @@
 name: Publish MCP Server
 
 # 推送 tag（v*）自动：发布 npm 包 → 发布官方 MCP Registry
-# npm 需要在仓库 Secrets 配置 NPM_TOKEN（npm Access Token, Automation 权限）。
+# npm 双路径：优先用 NPM_TOKEN secret；无 secret 时自动走 OIDC trusted publishing。
+# OIDC 要求：Node >=22.14 / npm >=11.5.1，且已在 npmjs.com 配置本仓库为 Trusted Publisher。
 on:
   push:
     tags:
@@ -11,23 +12,35 @@ on:
 jobs:
   npm:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+      - name: Ensure npm supports OIDC (>=11.5.1)
+        run: npm install -g npm@latest
       - name: Render namespace
         working-directory: mcp-server
         run: |
           OWNER="${GITHUB_REPOSITORY%%/*}"
           sed -i "s/REPLACEUSER/$OWNER/g; s/zhouhengchang/$OWNER/g" package.json server.json README.md 2>/dev/null || true
           echo "namespace -> io.github.$OWNER/legacy2modern"
-      - name: Publish to npm
+      - name: Publish to npm (token if available, else OIDC)
         working-directory: mcp-server
-        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NODE_AUTH_TOKEN" ]; then
+            echo "用 NPM_TOKEN secret 发布"
+            npm publish --access public
+          else
+            echo "无 NPM_TOKEN，走 OIDC trusted publishing"
+            npm publish --access public --provenance
+          fi
 
   registry:
     runs-on: ubuntu-latest
