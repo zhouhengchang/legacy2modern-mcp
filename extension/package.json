@@ -2,16 +2,33 @@
   "name": "legacy2modern",
   "displayName": "Legacy2Modern — AI 遗留代码重构助手",
   "description": "选中老旧代码，一键调用 AI Agent 迁移到现代技术栈（Spring Boot 3 / Vue3 / Python3）",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "publisher": "legacy2modern",
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Programming Languages", "Other"],
-  "activationEvents": ["onCommand:legacy2modern.refactor"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zhouhengchang/legacy2modern-mcp.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:legacy2modern.refactor"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
-      { "command": "legacy2modern.refactor", "title": "Legacy2Modern: 重构选中代码" },
-      { "command": "legacy2modern.login", "title": "Legacy2Modern: 登录" }
+      {
+        "command": "legacy2modern.refactor",
+        "title": "Legacy2Modern: 重构选中代码"
+      },
+      {
+        "command": "legacy2modern.login",
+        "title": "Legacy2Modern: 登录"
+      }
     ],
     "configuration": {
       "title": "Legacy2Modern",
@@ -33,5 +50,10 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./"
   },
-  "devDependencies": { "typescript": "^5.5.0", "@types/vscode": "^1.85.0", "@types/node": "^20.0.0" }
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^4.1.1",
+    "typescript": "^5.5.0"
+  }
 }
