@@ -1,8 +1,7 @@
 name: Publish MCP Server
 
 # 推送 tag（v*）自动：发布 npm 包 → 发布官方 MCP Registry
-# npm 采用 Trusted Publishing（OIDC），无需 NPM_TOKEN；
-# 需在 npmjs.com 该包页面一次性配置 GitHub repo 为 Trusted Publisher。
+# npm 需要在仓库 Secrets 配置 NPM_TOKEN（npm Access Token, Automation 权限）。
 on:
   push:
     tags:
@@ -10,35 +9,38 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  npm:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-
       - name: Render namespace
         working-directory: mcp-server
         run: |
           OWNER="${GITHUB_REPOSITORY%%/*}"
           sed -i "s/REPLACEUSER/$OWNER/g; s/zhouhengchang/$OWNER/g" package.json server.json README.md 2>/dev/null || true
           echo "namespace -> io.github.$OWNER/legacy2modern"
-
-      - name: Publish to npm (OIDC trusted publishing)
+      - name: Publish to npm
         working-directory: mcp-server
         run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+  registry:
+    runs-on: ubuntu-latest
+    needs: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
       - name: Install mcp-publisher
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_Linux_x86_64.tar.gz" | tar xz mcp-publisher
           sudo mv mcp-publisher /usr/local/bin/
-
       - name: Publish to MCP Registry
         working-directory: mcp-server
         run: |
