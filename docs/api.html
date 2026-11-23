@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legacy2Modern · API 文档</title>
+<style>
+  :root{--bg:#0b1020;--card:#151f3c;--line:#25335c;--txt:#e8eefc;--sub:#9fb0d9;--brand:#5b8cff;--ok:#22c55e;--mono:ui-monospace,Menlo,Consolas,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
+  a{color:var(--brand);text-decoration:none}
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px}
+  header{border-bottom:1px solid var(--line);background:rgba(11,16,32,.9);position:sticky;top:0}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .logo{font-weight:800}.nav a{margin-left:18px;color:var(--sub);font-size:14px}
+  h1{margin:48px 0 6px;font-size:30px}
+  .lead{color:var(--sub);margin-bottom:28px}
+  .endpoint{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+  .method{display:inline-block;min-width:56px;text-align:center;font-family:var(--mono);font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;margin-right:10px}
+  .get{background:#0d3b2e;color:#34d399}.post{background:#3b2d0d;color:#fbbf24}
+  .path{font-family:var(--mono);font-size:15px;font-weight:600}
+  .desc{color:var(--sub);font-size:13px;margin-top:6px}
+  .auth{color:#f87171;font-size:12px;margin-left:8px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin:24px 0}
+  code,pre{font-family:var(--mono)}
+  pre{background:#080d1c;border-radius:8px;padding:14px;overflow:auto;font-size:13px;color:#cfe0ff}
+  .tag{display:inline-block;background:#0e1730;border:1px solid var(--line);color:#8fb4ff;font-size:12px;padding:2px 9px;border-radius:6px;margin-right:6px}
+  footer{border-top:1px solid var(--line);color:var(--sub);text-align:center;padding:24px;margin-top:40px;font-size:13px}
+</style>
+</head>
+<body>
+<header><div class="wrap nav">
+  <div class="logo">Legacy2Modern · API</div>
+  <div><a href="index.html">首页</a><a href="openapi.json">OpenAPI JSON ↗</a></div>
+</div></header>
+
+<div class="wrap">
+  <h1>REST API 参考</h1>
+  <p class="lead">Legacy2Modern API v1.0.0 · 基地址 <code>http://localhost:8000</code> · 完整机器可读规范见 <a href="openapi.json">openapi.json</a>。除公开端点外，均需 <code>Authorization: Bearer &lt;token&gt;</code>。</p>
+
+  <div class="card">
+    <h3>快速开始</h3>
+    <pre># 1. 注册领 100 点
+curl -X POST http://localhost:8000/auth/register \
+  -H "Content-Type: application/json" -d '{"email":"you@example.com"}'
+# → 返回 {"token":"...","credits":100}
+
+# 2. 调用计费工具（每次自动扣点）
+curl -X POST http://localhost:8000/mcp/invoke \
+  -H "Authorization: Bearer &lt;token&gt;" -H "Content-Type: application/json" \
+  -d '{"tool":"legacy-code-audit","params":{"code":"var a=1; if(x==y) TODO"}}'
+
+# 3. 点数不足返回 HTTP 402 Payment Required</pre>
+    <span class="tag">1 点 ≈ ¥0.01 参考</span><span class="tag">静态分析引擎，无需 AI 密钥</span>
+  </div>
+
+  <h2>端点清单（8）</h2>
+
+  <div class="endpoint"><span class="method get">GET</span><span class="path">/health</span>
+    <div class="desc">健康检查，返回服务状态、AI provider 与工具数量。公开。</div></div>
+
+  <div class="endpoint"><span class="method post">POST</span><span class="path">/auth/register</span>
+    <div class="desc">邮箱注册，返回 user_id / token / credits(100)。重复邮箱返回 400。公开。</div></div>
+
+  <div class="endpoint"><span class="method post">POST</span><span class="path">/refactor</span><span class="auth">需鉴权</span>
+    <div class="desc">AI 代码重构，消耗 10 点；不足返回 402。记录到任务历史。</div></div>
+
+  <div class="endpoint"><span class="method get">GET</span><span class="path">/jobs</span><span class="auth">需鉴权</span>
+    <div class="desc">当前用户的重构任务历史（按时间倒序）。</div></div>
+
+  <div class="endpoint"><span class="method get">GET</span><span class="path">/me</span><span class="auth">需鉴权</span>
+    <div class="desc">当前账户信息（id / email / credits）。</div></div>
+
+  <div class="endpoint"><span class="method get">GET</span><span class="path">/mcp/tools</span>
+    <div class="desc">公开的 MCP 工具目录与定价，供 Agent 自动发现。公开。</div></div>
+
+  <div class="endpoint"><span class="method post">POST</span><span class="path">/mcp/invoke</span><span class="auth">需鉴权</span>
+    <div class="desc">MCP 工具统一计费入口：校验点数 → 分析 → 扣点 → 落记录。工具不存在 404，点数不足 402。</div></div>
+
+  <div class="endpoint"><span class="method get">GET</span><span class="path">/mcp/stats</span><span class="auth">需鉴权</span>
+    <div class="desc">当前账户的 MCP 调用统计与累计消耗。</div></div>
+
+  <div class="card">
+    <h3>计费工具与点数</h3>
+    <pre>legacy-code-audit       2 点   遗留代码技术债务审计
+java8-to-springboot3   10 点   Java8 → Spring Boot 3 迁移路线
+jquery-to-vue3          8 点   jQuery → Vue3 现代化建议
+dependency-risk-scan    3 点   依赖升级风险扫描</pre>
+  </div>
+</div>
+
+<footer>Legacy2Modern API v1.0.0 · <a href="https://github.com/zhouhengchang/legacy2modern-mcp">源码</a></footer>
+</body>
+</html>

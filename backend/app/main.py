@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3, os, uuid, time, json, re
 
-app = FastAPI(title="Legacy2Modern API", version="0.2.0")
+app = FastAPI(title="Legacy2Modern API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_credentials=True,
