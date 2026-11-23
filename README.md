@@ -33,13 +33,20 @@
 
 点数不足返回 `HTTP 402 Payment Required`。
 
+### 安全设计
+
+- **原子扣点**：条件 UPDATE 保证并发下不超扣、不出现负余额；SQLite WAL 提升并发。
+- **Token 摘要入库**：数据库仅存 SHA-256 摘要，明文只在注册时返回一次；兼容历史明文库自动升级。
+- **CORS 白名单**：由 `CORS_ORIGINS` 环境变量配置，默认仅本地开发源，杜绝 `*` + credentials 的无效危险配置。
+- **输入校验**：邮箱格式、代码体积上限（20 万字符）、工具名白名单。
+
 ## 目录结构
 
 ```
 Legacy2Modern/
 ├── backend/               # FastAPI 计费网关 + SQLite
 │   ├── app/main.py        # 鉴权 / 计费 / MCP 工具 / AI 可插拔
-│   ├── tests/             # 19 个自动化测试（pytest，含并发竞态）
+│   ├── tests/             # 24 个自动化测试（pytest，含并发/安全测试）
 │   ├── requirements*.txt  # 运行 / 开发依赖
 │   └── Dockerfile
 ├── mcp-server/            # MCP Server（stdio + HTTP）
@@ -111,7 +118,7 @@ print(r["credits_left"])
 
 ```bash
 pip install -r backend/requirements-dev.txt
-cd backend && python -m pytest tests/ -q   # 19 passed
+cd backend && python -m pytest tests/ -q   # 24 passed
 ```
 
 CI（`.github/workflows/test.yml`）在每次 push 自动运行同一套测试。

@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
-import sqlite3, os, uuid, time, json, re
+import sqlite3, os, uuid, time, json, re, hashlib, hmac
 
 # 输入边界：防止超大载荷滥用
 MAX_CODE_LEN = int(os.getenv("MAX_CODE_LEN", "200000"))   # 单段代码上限（字符）
@@ -24,15 +24,25 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Legacy2Modern API", version="1.0.0", lifespan=lifespan)
+
+# CORS 白名单：allow_credentials=True 时不可配 ["*"]（浏览器拒绝且不安全）。
+# 生产通过 CORS_ORIGINS 配置逗号分隔的域名；未配置时仅放行本地开发源。
+_cors_raw = os.getenv("CORS_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080,http://localhost:8000,http://127.0.0.1:8000")
+CORS_ORIGINS = [o.strip() for o in _cors_raw.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], allow_credentials=True,
-    allow_methods=["*"], allow_headers=["*"],
+    allow_origins=CORS_ORIGINS, allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"], allow_headers=["Authorization", "Content-Type"],
 )
 
 DB_PATH = os.getenv("DB_PATH", "legacy2modern.db")
 AI_PROVIDER = os.getenv("AI_PROVIDER", "mock")  # mock | ollama | deepseek
 COST_PER_REFACTOR = int(os.getenv("COST_PER_REFACTOR", "10"))
+
+
+def token_digest(token: str) -> str:
+    """token 入库摘要：明文只返回一次，DB 仅存 SHA-256，泄露不可反推。"""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 # MCP 工具目录：cost 为每次调用消耗的点数（1 点 ≈ ¥0.01 参考）
 MCP_TOOLS = {
@@ -68,6 +78,10 @@ def db():
 
 
 def init_db():
+    # 自动创建 DB 父目录，避免路径不存在导致启动失败
+    parent = os.path.dirname(os.path.abspath(DB_PATH))
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with db() as c:
         c.execute("PRAGMA journal_mode=WAL")
         c.execute("""CREATE TABLE IF NOT EXISTS users(
@@ -100,8 +114,17 @@ def auth(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "Missing bearer token")
     token = authorization.split(" ", 1)[1]
+    digest = token_digest(token)
     with db() as c:
-        row = c.execute("SELECT * FROM users WHERE token=?", (token,)).fetchone()
+        # 优先按摘要匹配（新数据）；回退按明文匹配以兼容历史库，避免升级即失效。
+        row = c.execute("SELECT * FROM users WHERE token=?", (digest,)).fetchone()
+        if row is None:
+            legacy = c.execute("SELECT * FROM users WHERE token=?", (token,)).fetchone()
+            if legacy is not None and hmac.compare_digest(legacy["token"], token):
+                row = legacy
+                # 顺手把明文升级为摘要
+                c.execute("UPDATE users SET token=? WHERE id=?", (digest, legacy["id"]))
+                c.commit()
     if not row:
         raise HTTPException(401, "Invalid token")
     return dict(row)
@@ -124,8 +147,9 @@ def register(body: RegisterIn):
     uid, token = uuid.uuid4().hex, uuid.uuid4().hex
     try:
         with db() as c:
+            # 入库仅存摘要，明文只在本次响应返回
             c.execute("INSERT INTO users VALUES(?,?,?,?,?)",
-                      (uid, body.email, token, 100, time.time()))
+                      (uid, body.email, token_digest(token), 100, time.time()))
             c.commit()
     except sqlite3.IntegrityError:
         raise HTTPException(400, "Email already registered")
@@ -356,7 +380,8 @@ def mcp_stats(user: dict = Depends(auth)):
 
 @app.get("/me")
 def me(user: dict = Depends(auth)):
-    return user
+    # 不回传 token（含摘要），仅返回必要字段
+    return {k: v for k, v in user.items() if k != "token"}
 
 
 @app.get("/jobs")

@@ -184,3 +184,46 @@ def test_oversized_code_rejected(client):
     r = client.post("/refactor", headers=auth_header(token), json={
         "source_code": "x" * 200001, "from_stack": "java8", "to_stack": "springboot3"})
     assert r.status_code == 422
+
+
+# ---------- 安全：token 存储与 CORS ----------
+
+def test_token_not_stored_in_plaintext(client):
+    import os
+    token = register(client, uid())
+    # 直接读取测试库，确认不含明文 token
+    from app import main as main
+    with main.db() as c:
+        row = c.execute("SELECT token FROM users WHERE token=?",
+                        (main.token_digest(token),)).fetchone()
+    assert row is not None, "应存摘要"
+    assert row["token"] != token, "数据库不得存明文 token"
+    assert len(row["token"]) == 64, "SHA-256 摘要应为 64 字符"
+
+
+def test_me_does_not_leak_token(client):
+    token = register(client, uid())
+    me = client.get("/me", headers=auth_header(token)).json()
+    assert "token" not in me
+    assert me["credits"] == 100
+
+
+def test_cors_allows_whitelisted_origin(client):
+    r = client.get("/health", headers={"Origin": "http://localhost:8080"})
+    assert r.headers.get("access-control-allow-origin") == "http://localhost:8080"
+
+
+def test_cors_rejects_unknown_origin(client):
+    r = client.get("/health", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in r.headers
+
+
+def test_db_parent_dir_auto_created(client, tmp_path):
+    """DB 父目录不存在时应自动创建而非启动失败。"""
+    import os, importlib
+    from app import main as main
+    nested = tmp_path / "a" / "b" / "deep.db"
+    os.environ["DB_PATH"] = str(nested)
+    importlib.reload(main)
+    main.init_db()
+    assert nested.exists(), "应自动创建嵌套目录并建库"
