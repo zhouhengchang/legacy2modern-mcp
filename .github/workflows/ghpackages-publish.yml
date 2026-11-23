@@ -1,0 +1,47 @@
+name: Publish npm Package to GitHub Packages
+
+# 把 MCP Server 作为 npm 包发布到 GitHub Packages（GITHUB_PRIVATE_TOKEN 无需个人 npm 凭证）。
+# GitHub Packages 要求 scoped 包名，故在 CI 中把 name 动态改写为 @<owner>/legacy2modern-mcp-server。
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  npm-ghp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Scope package name for GitHub Packages
+        working-directory: mcp-server
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          node -e '
+            const fs=require("fs");
+            const p=JSON.parse(fs.readFileSync("package.json","utf8"));
+            p.name="@"+process.env.OWNER.toLowerCase()+"/legacy2modern-mcp-server";
+            p.publishConfig={registry:"https://npm.pkg.github.com/"};
+            fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n");
+          '
+          echo "package name -> $(node -p "require('./package.json').name")"
+
+      - name: Publish to GitHub Packages
+        working-directory: mcp-server
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish --access public
+
+      - name: Summary
+        run: echo "包已发布到 https://github.com/${{ github.repository }}/packages"
