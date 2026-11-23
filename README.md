@@ -1,131 +1,144 @@
-# Legacy2Modern — AI 遗留代码现代化 SaaS（MVP 骨架）
+# Legacy2Modern
 
-> 遗留代码现代化 AI 智能体平台的最小可运行闭环。包含：AI 重构后端 + VS Code 插件 + Web 控制台 + Docker 部署配置。
-> 当前为 **MVP 骨架**：AI 调用默认走 mock，配置密钥后自动切换真实模型；支付/Web3 为后续扩展点。
+> **遗留代码现代化 AI Agent / MCP 计费网关** — 把代码审计与框架迁移做成任意 AI Agent 都能调用的付费能力，按调用计费，一次构建、全生态变现。
 
-> 🌐 **产品官网（GitHub Pages）**：https://zhouhengchang.github.io/legacy2modern-mcp/
+[![version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/zhouhengchang/legacy2modern-mcp/releases/tag/v1.0.0)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![tests](https://github.com/zhouhengchang/legacy2modern-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/zhouhengchang/legacy2modern-mcp/actions/workflows/test.yml)
 
+- 🌐 **产品官网**：https://zhouhengchang.github.io/legacy2modern-mcp/
+- 📖 **在线 API 文档**：https://zhouhengchang.github.io/legacy2modern-mcp/api.html
+- 🐳 **容器镜像**：`ghcr.io/zhouhengchang/legacy2modern-backend:latest`
+- 📦 **源码 / Release**：https://github.com/zhouhengchang/legacy2modern-mcp
 
-## 一、项目结构
+## 核心能力
+
+| 能力 | 说明 |
+|---|---|
+| MCP 计费网关 | 4 个计费工具 + 1 个免费发现工具，调用经 `/mcp/invoke` 校验点数→分析→扣点→落库 |
+| 双传输 | stdio（本地编辑器直连）+ Streamable HTTP（云端 Agent 远程调用） |
+| 静态分析引擎 | 无需 AI 密钥即可给出技术债务、迁移路线、依赖风险的可执行结果 |
+| AI 可插拔 | mock / Ollama / DeepSeek，配置即切换；未配置密钥自动降级 mock |
+| 统一账本 | 注册发 token、调用扣点、任务留痕，MCP 与 Web 共用 SQLite 账本 |
+
+### 计费工具
+
+| 工具 | 点数 | 用途 |
+|---|---|---|
+| `legacy-code-audit` | 2 | 遗留代码技术债务审计 |
+| `java8-to-springboot3` | 10 | Java8 → Spring Boot 3 迁移路线图 |
+| `jquery-to-vue3` | 8 | jQuery → Vue3 现代化建议 |
+| `dependency-risk-scan` | 3 | 依赖升级风险扫描 |
+| `l2m-list-tools` | 免费 | 工具发现 |
+
+点数不足返回 `HTTP 402 Payment Required`。
+
+## 目录结构
 
 ```
 Legacy2Modern/
-├── backend/            # FastAPI 后端
-│   ├── app/main.py     # 用户体系 / 点数计费 / 重构 Agent 接口
-│   ├── requirements.txt
+├── backend/               # FastAPI 计费网关 + SQLite
+│   ├── app/main.py        # 鉴权 / 计费 / MCP 工具 / AI 可插拔
+│   ├── tests/             # 17 个自动化测试（pytest）
+│   ├── requirements*.txt  # 运行 / 开发依赖
 │   └── Dockerfile
-├── extension/          # VS Code 插件（TypeScript）
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── src/extension.ts
-├── mcp-server/         # MCP Server（被调用即变现，v0.2 新增）
-│   ├── index.js        # 4 个计费工具 + 1 个免费发现工具
-│   ├── test-client.js  # 端到端验证客户端
-│   ├── README.md       # 接入各 Agent 平台说明
-│   └── configs/        # Claude/Cursor/Gemini 接入配置样例
-├── web/                # Web 控制台（单文件，无需构建）
-│   └── index.html
-├── docker-compose.yml  # 一键编排 backend + web
-├── .env.example        # 环境变量样例
-└── README.md
+├── mcp-server/            # MCP Server（stdio + HTTP）
+│   ├── index.js
+│   ├── src/create-server.js
+│   ├── test-client.js
+│   └── configs/           # Claude / Cursor / Gemini 接入样例
+├── extension/             # VS Code 插件（TypeScript）
+├── web/                   # Web 控制台（单文件）
+├── sdk-python/            # Python SDK（legacy2modern）
+├── docs/                  # GitHub Pages 官网 + api.html + openapi.json
+├── publish/               # 多平台上架脚本（凭证预检 + 幂等）
+└── .github/workflows/     # publish / docker-publish / ghpackages / test
 ```
 
-## 二、快速启动（Docker 一键）
+## 快速启动
 
 ```bash
-cd Legacy2Modern
 cp .env.example .env
 docker compose up --build
-# 后端 API: http://localhost:8000  (文档 http://localhost:8000/docs)
+# API: http://localhost:8000  (Swagger: /docs)
 # Web 控制台: http://localhost:8080
 ```
 
-## 三、本地开发启动（不用 Docker）
+或本地开发：
 
 ```bash
-# 1) 后端
-python3 -m venv .venv && source .venv/bin/activate
 pip install -r backend/requirements.txt
 cd backend && python -m uvicorn app.main:app --reload --port 8000
-
-# 2) Web 控制台：直接浏览器打开 web/index.html
-#    （需先启动后端，控制台默认连 8000 端口）
 ```
 
-## 四、核心 API
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/auth/register` | 邮箱注册，返回 token 并赠 100 点数 |
-| POST | `/refactor` | 提交代码 + 源/目标栈，消耗点数，返回重构结果 |
-| GET | `/me` | 当前用户信息与点数 |
-| GET | `/jobs` | 重构历史任务 |
-| GET | `/mcp/tools` | MCP 工具目录（免费发现，v0.2） |
-| POST | `/mcp/invoke` | MCP 工具统一调用入口（校验 token → 扣点 → 返回结果） |
-| GET | `/mcp/stats` | 当前账户 MCP 调用统计与累计消耗（v0.2） |
-| GET | `/health` | 健康检查 |
-
-调用示例：
-
-```bash
-# 注册拿 token
-curl -X POST http://localhost:8000/auth/register \
-  -H "Content-Type: application/json" -d '{"email":"me@example.com"}'
-
-# 重构（把 <TOKEN> 换成上一步返回的 token）
-curl -X POST http://localhost:8000/refactor \
-  -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" \
-  -d '{"source_code":"public class A {}","from_stack":"java8","to_stack":"springboot3"}'
-```
-
-## 五、接入真实 AI 模型
-
-复制 `.env.example` 为 `.env`，按需修改：
-
-- `AI_PROVIDER=ollama`：需本地运行 Ollama 并拉取 `deepseek-coder` 模型；
-- `AI_PROVIDER=deepseek`：填入 `DEEPSEEK_API_KEY`，走 DeepSeek-Coder 云端 API；
-- `AI_PROVIDER=mock`（默认）：不调用模型，返回带标注的原代码，用于演示与联调。
-
-## 六、VS Code 插件安装
-
-```bash
-cd extension
-npm install
-npm run compile
-# 调试：VS Code 打开 extension 目录，F5 启动扩展开发宿主
-# 打包：npx @vscode/vsce package （生成 .vsix）
-```
-
-插件命令（Ctrl+Shift+P）：
-- `Legacy2Modern: 登录` — 输入邮箱获取 token
-- `Legacy2Modern: 重构选中代码` — 选中代码 → 选目标栈 → 结果在新标签页打开
-
-## 六（附）、MCP Server —— 被调用即变现
+## MCP 接入
 
 ```bash
 cd mcp-server && npm install
-# 注册后端拿 token 后：
 L2M_TOKEN=<TOKEN> npm test
 # 把 index.js 配入 Claude Code / Cursor / Gemini CLI（见 mcp-server/README.md）
 ```
 
-已实现 4 个计费工具（`legacy-code-audit` 2 点 / `java8-to-springboot3` 10 点 / `jquery-to-vue3` 8 点 / `dependency-risk-scan` 3 点）+ 1 个免费发现工具。每次调用经后端 `/mcp/invoke` 自动扣点并落库——**一次构建，被所有支持 MCP 的 Agent 平台调用，调用一次赚一次**。
+stdio 配置示例：
 
-## 七、商业化扩展点（ roadmap ）
+```json
+{
+  "mcpServers": {
+    "legacy2modern": {
+      "command": "node",
+      "args": ["path/to/l2m-mcp/index.js"],
+      "env": { "L2M_API_URL": "http://localhost:8000", "L2M_TOKEN": "<token>" }
+    }
+  }
+}
+```
 
-- [x] MCP 被调用变现网关（`/mcp/tools` `/mcp/invoke` `/mcp/stats` + 4 个计费工具，已实现并验证）
-- [ ] 支付：接入 USDC/USDT 链上支付、点数充值订单
-- [ ] Web3 登录：钱包签名鉴权（ERC-4361 / SIWE）、账户抽象 ERC-4337
-- [ ] 计费：Stripe / 微信支付订阅，团队席位管理
+## Python SDK
+
+```bash
+pip install legacy2modern
+```
+
+```python
+from legacy2modern import L2MClient
+c = L2MClient(token="...")          # 或 base_url 指向公网网关
+c.register("me@example.com")        # 注册领 100 点
+r = c.audit("var a=1; if(a==b) TODO")
+print(r["credits_left"])
+```
+
+## 测试
+
+```bash
+pip install -r backend/requirements-dev.txt
+cd backend && python -m pytest tests/ -q   # 17 passed
+```
+
+CI（`.github/workflows/test.yml`）在每次 push 自动运行同一套测试。
+
+## 发布状态
+
+| 平台 | 状态 |
+|---|---|
+| GitHub 仓库 / Release v1.0.0 / Actions | ✅ 已上线 |
+| GitHub Pages 官网 + API 文档 | ✅ 已上线 |
+| GitHub Container Registry 镜像 | ✅ 已上线（Public） |
+| GitHub Packages npm 包 | ✅ 已上线（Public） |
+| npmjs.org / MCP 官方 Registry | ◐ 待 `NPM_TOKEN` |
+| Cloudflare / PyPI / VS Code / Docker Hub | ◐ 待各自本人 Token |
+
+补齐任一 Token 到 `publish/.env` 后执行对应脚本即可上架；全部填好后 `bash publish/go_all.sh all` 一次跑通。拿到 `NPM_TOKEN` 后 `NPM_TOKEN=npm_xxx bash publish/auto_complete.sh` 可自动完成 npmjs.org + MCP Registry。详见 `publish/.env.example`。
+
+## 商业化路线图
+
+- [x] MCP 被调用变现网关 + 4 个计费工具
+- [x] 双传输 / Web 控制台 / VS Code 插件 / Python SDK
+- [x] 自动化测试 + CI + 在线文档
+- [ ] 支付：USDC/USDT 链上充值、订阅与团队席位
+- [ ] Web3 登录：SIWE（ERC-4361）、账户抽象 ERC-4337
 - [ ] Agent 增强：多智能体协作（审计→迁移→测试→回归）、RAG 迁移知识库
-- [ ] 私有化部署：企业离线镜像 + 本地模型（Ollama）一键脚本
-- [ ] 可观测：任务成功率、点数消耗、Token 成本监控
+- [ ] 私有化部署：企业离线镜像 + 本地模型
 
-## 八、技术说明
+## 许可
 
-- 后端使用 SQLite（零配置），生产可切 PostgreSQL（改 `db()` 连接即可）；
-- `/refactor` 为同步演示接口，生产建议改为任务队列（Celery/RQ）+ 轮询；
-- 默认开放 CORS 便于本地联调，生产需收敛为白名单域名。
-
----
-*Generated as MVP skeleton — 可运行、可扩展、可商业化。*
+MIT © 2026 zhouhengchang

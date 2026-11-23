@@ -162,3 +162,25 @@ def test_dependency_scan_flags_high_risk(client):
         "tool": "dependency-risk-scan",
         "params": {"code": "log4j 1.2.17, fastjson"}})
     assert r.json()["result"]["risk_level"] == "高"
+
+
+# ---------- 输入校验 ----------
+
+def test_invalid_email_rejected(client):
+    for bad in ["", "notanemail", "a@", "a@b", "x" * 300 + "@a.com"]:
+        r = client.post("/auth/register", json={"email": bad})
+        assert r.status_code == 422, f"应拒绝非法邮箱: {bad}"
+
+
+def test_invalid_tool_name_rejected(client):
+    token = register(client, uid())
+    r = client.post("/mcp/invoke", headers=auth_header(token), json={
+        "tool": "BAD NAME!", "params": {}})
+    assert r.status_code == 422
+
+
+def test_oversized_code_rejected(client):
+    token = register(client, uid())
+    r = client.post("/refactor", headers=auth_header(token), json={
+        "source_code": "x" * 200001, "from_stack": "java8", "to_stack": "springboot3"})
+    assert r.status_code == 422

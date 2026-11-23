@@ -141,6 +141,22 @@
   </div>
 </section>
 
+<section id="try">
+  <div class="wrap">
+    <h2 class="sec-h">在线体验 · 遗留代码审计</h2>
+    <p class="sec-s">无需登录，即时感受 <span class="mono">legacy-code-audit</span> 的静态分析能力（浏览器本地运行，与服务端同款核心规则）。</p>
+    <div class="card">
+      <label style="display:block;margin-bottom:8px;color:var(--sub);font-size:13px">粘贴一段遗留代码：</label>
+      <textarea id="demoCode" style="width:100%;min-height:130px;background:#080d1c;border:1px solid var(--line);border-radius:10px;color:#cfe0ff;padding:14px;font-family:var(--mono);font-size:13px" placeholder='var pwd = "admin123"; if(a==b) TODO; eval(x);'>var pwd = "admin123";
+if (a == b) { /* TODO */ }
+eval(userInput);
+System.out.println("debug");</textarea>
+      <button class="btn" style="margin-top:12px" onclick="runDemo()">开始审计 →</button>
+      <div id="demoResult" style="margin-top:16px"></div>
+    </div>
+  </div>
+</section>
+
 <section id="status">
   <div class="wrap">
     <h2 class="sec-h">发布状态</h2>
@@ -164,5 +180,42 @@
     <p>源码：<a href="https://github.com/zhouhengchang/legacy2modern-mcp" target="_blank" style="color:var(--brand)">github.com/zhouhengchang/legacy2modern-mcp</a></p>
   </div>
 </footer>
+<script>
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function runDemo(){
+  const code = document.getElementById('demoCode').value;
+  const checks = [
+    [/\bvar\s+/g, '遗留 var 声明（建议 let/const 或强类型）'],
+    [/==(?!=)/g, '松散相等 ==（潜在类型强制转换问题）'],
+    [/TODO|FIXME|HACK|XXX/g, '遗留待办/临时标记'],
+    [/System\.out\.print/g, '控制台输出未清理'],
+    [/printStackTrace/g, '异常仅打印堆栈，缺少处理'],
+    [/(password|passwd|secret)\s*[=:]\s*['"][^'"]+['"]/gi, '疑似硬编码凭据'],
+    [/\beval\s*\(/g, '使用 eval（安全风险）'],
+    [/new\s+Date\s*\(/g, '旧日期 API（建议 java.time / dayjs）'],
+  ];
+  const issues = [];
+  checks.forEach(([pat,desc])=>{ const m=code.match(pat); if(m) issues.push({desc,hits:m.length}); });
+  const score = Math.max(0, 100 - issues.reduce((s,i)=>s+i.hits*8,0));
+  const level = score<60?'高':score<85?'中':'低';
+  const color = score<60?'#f87171':score<85?'#fbbf24':'#34d399';
+  const nloc = code.split('\n').filter(l=>l.trim()&&!/^\s*(\/\/|#|\/\*|\*)/.test(l)).length;
+  const rows = issues.length
+    ? issues.map(i=>`<tr><td>${esc(i.desc)}</td><td style="text-align:center;color:#fbbf24">${i.hits}</td></tr>`).join('')
+    : '<tr><td colspan="2" style="color:var(--ok);text-align:center">未发现明显技术债务标记 ✓</td></tr>';
+  document.getElementById('demoResult').innerHTML =
+    `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+       <span class="tag">风险评分 <b style="color:${color}">${score}</b>/100</span>
+       <span class="tag">等级 <b style="color:${color}">${level}</b></span>
+       <span class="tag">有效代码行 ${nloc}</span>
+       <span class="tag">问题项 ${issues.length}</span>
+     </div>
+     <table style="width:100%;border-collapse:collapse;font-size:13px">
+       <thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid var(--line);color:var(--sub)">问题</th><th style="padding:8px;border-bottom:1px solid var(--line);color:var(--sub)">命中</th></tr></thead>
+       <tbody>${rows}</tbody>
+     </table>
+     <p style="color:var(--sub);font-size:12px;margin-top:10px">↑ 这是精简演示版。完整版含 8 类检测规则、迁移路线图生成与计费落库，通过 MCP 工具调用。</p>`;
+}
+</script>
 </body>
 </html>

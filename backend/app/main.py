@@ -6,12 +6,24 @@ v0.2: 新增 MCP 网关 —— 工具目录 / 按次计费调用 / 调用统计�
       让任意 MCP 客户端（Claude Code / Cursor / Gemini CLI / 火山方舟 / 阿里百炼）
       调用工具时自动扣点，实现「被调用即变现」。
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import sqlite3, os, uuid, time, json, re
 
-app = FastAPI(title="Legacy2Modern API", version="1.0.0")
+# 输入边界：防止超大载荷滥用
+MAX_CODE_LEN = int(os.getenv("MAX_CODE_LEN", "200000"))   # 单段代码上限（字符）
+MAX_EMAIL_LEN = 254
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="Legacy2Modern API", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], allow_credentials=True,
@@ -67,11 +79,6 @@ def init_db():
         c.commit()
 
 
-@app.on_event("startup")
-def _startup():
-    init_db()
-
-
 def auth(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "Missing bearer token")
@@ -85,6 +92,14 @@ def auth(authorization: str = Header(None)):
 
 class RegisterIn(BaseModel):
     email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        v = v.strip()
+        if not v or len(v) > MAX_EMAIL_LEN or "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("invalid email")
+        return v
 
 
 @app.post("/auth/register")
@@ -104,6 +119,13 @@ class RefactorIn(BaseModel):
     source_code: str
     from_stack: str = "java8"
     to_stack: str = "springboot3"
+
+    @field_validator("source_code")
+    @classmethod
+    def check_size(cls, v: str) -> str:
+        if len(v) > MAX_CODE_LEN:
+            raise ValueError(f"source_code too large (max {MAX_CODE_LEN})")
+        return v
 
 
 def call_ai(code: str, from_stack: str, to_stack: str) -> str:
@@ -268,6 +290,20 @@ def mcp_tools():
 class McpInvokeIn(BaseModel):
     tool: str
     params: dict = {}
+
+    @field_validator("tool")
+    @classmethod
+    def check_tool(cls, v: str) -> str:
+        if not v or len(v) > 64 or not re.fullmatch(r"[a-z0-9\-]+", v):
+            raise ValueError("invalid tool name")
+        return v
+
+    @field_validator("params")
+    @classmethod
+    def check_params_size(cls, v: dict) -> dict:
+        if len(str(v)) > MAX_CODE_LEN:
+            raise ValueError("params too large")
+        return v
 
 
 @app.post("/mcp/invoke")
