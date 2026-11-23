@@ -3,6 +3,9 @@
 > 遗留代码现代化 AI 智能体平台的最小可运行闭环。包含：AI 重构后端 + VS Code 插件 + Web 控制台 + Docker 部署配置。
 > 当前为 **MVP 骨架**：AI 调用默认走 mock，配置密钥后自动切换真实模型；支付/Web3 为后续扩展点。
 
+> 🌐 **产品官网（GitHub Pages）**：https://zhouhengchang.github.io/legacy2modern-mcp/
+
+
 ## 一、项目结构
 
 ```
