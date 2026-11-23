@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legacy2Modern — 遗留代码现代化 AI Agent / MCP 计费网关</title>
+<meta name="description" content="把遗留代码审计与 Java8→SpringBoot3、jQuery→Vue3 迁移做成可被任意 AI Agent 调用的 MCP 工具，按调用计费。">
+<style>
+  :root{
+    --bg:#0b1020; --bg2:#111a33; --card:#151f3c; --line:#25335c;
+    --txt:#e8eefc; --sub:#9fb0d9; --brand:#5b8cff; --brand2:#8b5cf6;
+    --ok:#22c55e; --warn:#f59e0b; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:radial-gradient(1200px 600px at 15% -10%,#1b2a5a 0,transparent 60%),var(--bg);
+       color:var(--txt);font-family:-apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;line-height:1.7}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  header{position:sticky;top:0;z-index:10;backdrop-filter:blur(12px);background:rgba(11,16,32,.75);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .logo{font-weight:800;font-size:18px;letter-spacing:.3px}
+  .logo b{background:linear-gradient(90deg,var(--brand),var(--brand2));-webkit-background-clip:text;color:transparent}
+  .nav a.more{margin-left:22px;color:var(--sub);font-size:14px}
+  .nav a.more:hover{color:var(--txt)}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600;
+       background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;border:0;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  .hero{padding:88px 0 56px;text-align:center}
+  .tag{display:inline-block;padding:6px 14px;border:1px solid var(--line);border-radius:30px;color:var(--sub);font-size:13px;background:var(--card)}
+  .hero h1{font-size:clamp(30px,5vw,54px);line-height:1.2;margin:22px 0 14px;font-weight:800}
+  .hero h1 span{background:linear-gradient(90deg,#7aa2ff,#a78bfa,#f0abfc);-webkit-background-clip:text;color:transparent}
+  .hero p{max-width:720px;margin:0 auto 30px;color:var(--sub);font-size:17px}
+  .cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:56px 0 20px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;text-align:center}
+  .stat .n{font-size:30px;font-weight:800;color:#fff}
+  .stat .l{color:var(--sub);font-size:13px;margin-top:4px}
+  section{padding:48px 0}
+  .sec-h{font-size:26px;font-weight:800;margin:0 0 8px}
+  .sec-s{color:var(--sub);margin:0 0 28px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+  .card h3{margin:0 0 6px;font-size:17px}
+  .card p{margin:0;color:var(--sub);font-size:14px}
+  .pill{display:inline-block;font-family:var(--mono);font-size:12px;padding:3px 10px;border-radius:8px;background:#0e1730;color:#8fb4ff;border:1px solid var(--line)}
+  .cost{float:right;font-family:var(--mono);font-size:13px;color:var(--warn);font-weight:700}
+  pre{background:#080d1c;border:1px solid var(--line);border-radius:12px;padding:18px;overflow:auto;font-family:var(--mono);font-size:13px;color:#cfe0ff;margin:0}
+  .k{color:#8b5cf6}.s{color:#34d399}.c{color:#64748b}
+  .badge-ok{color:var(--ok)}.badge-warn{color:var(--warn)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--sub);font-weight:600;font-size:13px}
+  footer{border-top:1px solid var(--line);color:var(--sub);text-align:center;padding:30px 0;font-size:13px}
+  .mono{font-family:var(--mono)}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}.nav a.more{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="logo"><b>Legacy2Modern</b> · L2M</div>
+    <div>
+      <a class="more" href="#tools">工具</a>
+      <a class="more" href="#integrate">接入</a>
+      <a class="more" href="#status">状态</a>
+      <a class="btn" href="https://github.com/zhouhengchang/legacy2modern-mcp" target="_blank">GitHub ↗</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <span class="tag">MCP Server · 被调用即变现 · AI Agent Ready</span>
+    <h1>让遗留代码现代化成为<br><span>任意 AI 都能调用的付费能力</span></h1>
+    <p>把代码审计与框架迁移封装成标准 MCP 工具。Claude、Cursor、Gemini 等编码智能体直接调用，按次扣点，开发者与平台自动结算——一次构建，全生态变现。</p>
+    <div class="cta">
+      <a class="btn" href="#integrate">立即接入 →</a>
+      <a class="btn ghost" href="https://github.com/zhouhengchang/legacy2modern-mcp/releases/tag/v1.0.0" target="_blank">查看 v1.0.0</a>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">5</div><div class="l">MCP 工具</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">传输协议 stdio / HTTP</div></div>
+    <div class="stat"><div class="n">100</div><div class="l">注册赠送点数</div></div>
+    <div class="stat"><div class="n">v1.0.0</div><div class="l">已发布版本</div></div>
+  </div>
+</div>
+
+<section id="tools">
+  <div class="wrap">
+    <h2 class="sec-h">工具市场 · Tool-as-a-Service</h2>
+    <p class="sec-s">每次调用按点数计费，点数不足返回 HTTP 402。发现工具免费开放，降低接入门槛。</p>
+    <div class="grid">
+      <div class="card"><span class="cost">2 点</span><h3>legacy-code-audit</h3><p>扫描遗留代码库，输出技术债、坏味道与现代化优先级清单。</p></div>
+      <div class="card"><span class="cost">10 点</span><h3>java8-to-springboot3</h3><p>生成 Java 8 → Spring Boot 3 的迁移路线、依赖替换与风险提示。</p></div>
+      <div class="card"><span class="cost">8 点</span><h3>jquery-to-vue3</h3><p>输出 jQuery → Vue 3 组件化重构路径与渐进式迁移建议。</p></div>
+      <div class="card"><span class="cost">3 点</span><h3>dependency-risk-scan</h3><p>识别过时依赖、CVE 风险与许可证冲突。</p></div>
+      <div class="card"><span class="cost" style="color:var(--ok)">免费</span><h3>l2m-list-tools</h3><p>列出全部可用工具与定价，供 Agent 自动发现能力。</p></div>
+      <div class="card"><h3>计费网关</h3><p>FastAPI + SQLite，注册发 token、调用扣点、任务留痕，MCP 与 Web 共用一套账本。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="integrate">
+  <div class="wrap">
+    <h2 class="sec-h">接入方式</h2>
+    <p class="sec-s">stdio 供本地编辑器直连；Streamable HTTP 供云端 Agent 远程调用。谁调用，谁付费。</p>
+    <div class="grid">
+      <div class="card">
+        <h3>① stdio（本地 MCP Client）</h3>
+        <pre><span class="c">// 各编辑器 MCP 配置</span>
+{
+  <span class="k">"mcpServers"</span>: {
+    <span class="k">"legacy2modern"</span>: {
+      <span class="k">"command"</span>: <span class="s">"node"</span>,
+      <span class="k">"args"</span>: [<span class="s">"path/to/l2m-mcp/index.js"</span>],
+      <span class="k">"env"</span>: {
+        <span class="k">"L2M_API_URL"</span>: <span class="s">"http://localhost:8000"</span>,
+        <span class="k">"L2M_TOKEN"</span>: <span class="s">"&lt;your token&gt;"</span>
+      }
+    }
+  }
+}</pre>
+      </div>
+      <div class="card">
+        <h3>② Streamable HTTP（远程）</h3>
+        <pre><span class="c">// POST /mcp/invoke</span>
+{
+  <span class="k">"tool"</span>: <span class="s">"java8-to-springboot3"</span>,
+  <span class="k">"arguments"</span>: {
+    <span class="k">"code"</span>: <span class="s">"..."</span>
+  }
+}
+<span class="c">// Header: Authorization: Bearer &lt;token&gt;</span>
+<span class="c">// 点数不足 → HTTP 402 Payment Required</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="status">
+  <div class="wrap">
+    <h2 class="sec-h">发布状态</h2>
+    <p class="sec-s">GitHub 全链路已真实上线；其余平台工程就绪，待账号本人一次性授权 Token。</p>
+    <table>
+      <thead><tr><th>平台</th><th>产物</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td>GitHub 仓库</td><td class="mono">zhouhengchang/legacy2modern-mcp</td><td class="badge-ok">● 已上线</td></tr>
+        <tr><td>GitHub Release</td><td class="mono">v1.0.0</td><td class="badge-ok">● 已上线</td></tr>
+        <tr><td>GitHub Pages</td><td class="mono">本站</td><td class="badge-ok">● 已上线</td></tr>
+        <tr><td>npm / MCP Registry</td><td class="mono">legacy2modern-mcp-server</td><td class="badge-warn">◐ 待 NPM_TOKEN</td></tr>
+        <tr><td>Cloudflare / VS Code / Docker / PyPI</td><td class="mono">一键脚本就绪</td><td class="badge-warn">◐ 待本人 Token</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Legacy2Modern · 遗留代码现代化 AI Agent / MCP 计费网关 · v1.0.0</p>
+    <p>源码：<a href="https://github.com/zhouhengchang/legacy2modern-mcp" target="_blank" style="color:var(--brand)">github.com/zhouhengchang/legacy2modern-mcp</a></p>
+  </div>
+</footer>
+</body>
+</html>
