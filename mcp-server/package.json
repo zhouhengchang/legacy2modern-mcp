@@ -1,5 +1,5 @@
 {
-  "name": "@legacy2modern/mcp-server",
+  "name": "legacy2modern-mcp-server",
   "version": "1.0.0",
   "description": "遗留代码现代化 MCP Server：技术债务审计、Java8→Spring Boot 3 迁移、jQuery→Vue3、依赖风险扫描。每次调用自动计费。",
   "mcpName": "io.github.zhouhengchang/legacy2modern",
