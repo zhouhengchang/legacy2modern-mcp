@@ -1,19 +1,19 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.REPLACEUSER/legacy2modern",
+  "name": "io.github.zhouhengchang/legacy2modern",
   "title": "Legacy2Modern",
   "description": "Audit legacy code and generate Java/Spring and jQuery/Vue migration roadmaps plus dependency risk",
-  "version": "0.2.0",
-  "websiteUrl": "https://github.com/REPLACEUSER/legacy2modern-mcp#readme",
+  "version": "1.0.0",
+  "websiteUrl": "https://github.com/zhouhengchang/legacy2modern-mcp#readme",
   "repository": {
-    "url": "https://github.com/REPLACEUSER/legacy2modern-mcp",
+    "url": "https://github.com/zhouhengchang/legacy2modern-mcp",
     "source": "github"
   },
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@legacy2modern/mcp-server",
-      "version": "0.2.0",
+      "version": "1.0.0",
       "transport": {
         "type": "stdio"
       }
@@ -22,7 +22,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://REPLACE_WORKER.workers.dev/mcp",
+      "url": "https://legacy2modern-mcp.workers.dev/mcp",
       "headers": [
         {
           "name": "Authorization",

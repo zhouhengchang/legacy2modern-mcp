@@ -1,8 +1,8 @@
 {
   "name": "@legacy2modern/mcp-server",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "遗留代码现代化 MCP Server：技术债务审计、Java8→Spring Boot 3 迁移、jQuery→Vue3、依赖风险扫描。每次调用自动计费。",
-  "mcpName": "io.github.REPLACEUSER/legacy2modern",
+  "mcpName": "io.github.zhouhengchang/legacy2modern",
   "type": "module",
   "main": "index.js",
   "bin": {
@@ -21,16 +21,31 @@
     "start:http": "node src/http-server.js",
     "test": "node test-client.js"
   },
-  "keywords": ["mcp", "model-context-protocol", "legacy-code", "refactor", "java", "spring-boot", "vue", "code-audit", "ai-agent", "monetization"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "legacy-code",
+    "refactor",
+    "java",
+    "spring-boot",
+    "vue",
+    "code-audit",
+    "ai-agent",
+    "monetization"
+  ],
   "author": "Legacy2Modern",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/REPLACEUSER/legacy2modern-mcp.git"
+    "url": "https://github.com/zhouhengchang/legacy2modern-mcp.git"
   },
-  "homepage": "https://github.com/REPLACEUSER/legacy2modern-mcp#readme",
-  "bugs": { "url": "https://github.com/REPLACEUSER/legacy2modern-mcp/issues" },
-  "engines": { "node": ">=18" },
+  "homepage": "https://github.com/zhouhengchang/legacy2modern-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/zhouhengchang/legacy2modern-mcp/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "zod": "^3.23.0"

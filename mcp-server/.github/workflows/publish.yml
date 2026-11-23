@@ -23,7 +23,7 @@ jobs:
       - name: Replace placeholders with repo owner
         run: |
           OWNER="${GITHUB_REPOSITORY%%/*}"
-          sed -i "s/REPLACEUSER/$OWNER/g" package.json server.json README.md
+          sed -i "s/zhouhengchang/$OWNER/g" package.json server.json README.md
           echo "namespace -> io.github.$OWNER/legacy2modern"
 
       - name: Publish to npm
