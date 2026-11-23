@@ -1,0 +1,13 @@
+{
+  "_说明": "Gemini CLI: ~/.gemini/settings.json；OpenCode/Cline/Windsurf 同为 mcpServers 结构，仅路径不同",
+  "mcpServers": {
+    "legacy2modern": {
+      "command": "node",
+      "args": ["/绝对路径/Legacy2Modern/mcp-server/index.js"],
+      "env": {
+        "L2M_TOKEN": "<TOKEN>",
+        "L2M_API_URL": "http://127.0.0.1:8000"
+      }
+    }
+  }
+}

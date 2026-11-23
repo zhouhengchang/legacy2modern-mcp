@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legacy2Modern · Web 控制台</title>
+<style>
+  :root{--primary:#1565C0;--heading:#1A237E;--bg:#F5F7FA;--text:#212121;--border:#E0E0E0}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text)}
+  header{background:var(--heading);color:#fff;padding:16px 28px;display:flex;justify-content:space-between;align-items:center}
+  header h1{margin:0;font-size:18px}
+  .badge{background:rgba(255,255,255,.18);padding:4px 12px;border-radius:20px;font-size:13px}
+  main{max-width:900px;margin:28px auto;padding:0 20px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px}
+  .card h2{margin-top:0;color:var(--primary);font-size:16px}
+  label{display:block;margin:12px 0 4px;font-size:13px;font-weight:600}
+  input,textarea,select{width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:inherit}
+  textarea{min-height:150px;font-family:monospace;font-size:13px}
+  button{background:var(--primary);color:#fff;border:0;padding:10px 20px;border-radius:6px;cursor:pointer;margin-top:14px;font-size:14px}
+  button:disabled{opacity:.5}
+  pre{background:#263238;color:#B0BEC5;padding:16px;border-radius:6px;overflow:auto;max-height:320px;font-size:12px}
+  .msg{font-size:13px;margin-top:10px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{border:1px solid var(--border);padding:8px;text-align:left}
+  th{background:var(--bg)}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Legacy2Modern · AI 遗留代码现代化控制台</h1>
+  <span class="badge" id="creditBadge">未登录</span>
+</header>
+<main>
+  <div class="card" id="loginCard">
+    <h2>① 登录 / 注册</h2>
+    <label>邮箱</label>
+    <input id="email" placeholder="you@example.com">
+    <button onclick="login()">获取 Token（赠送 100 点数）</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div class="card hidden" id="refactorCard">
+    <h2>② AI 代码重构</h2>
+    <label>源技术栈</label>
+    <select id="fromStack"><option>java8</option><option>jquery</option><option>python2</option></select>
+    <label>目标技术栈</label>
+    <select id="toStack"><option>springboot3</option><option>vue3</option><option>python3</option></select>
+    <label>粘贴遗留代码</label>
+    <textarea id="code" placeholder="// 粘贴需要迁移的旧代码…"></textarea>
+    <button onclick="doRefactor()">开始重构（消耗 10 点数）</button>
+    <div class="msg" id="refactorMsg"></div>
+    <h3 style="margin-top:20px">重构结果</h3>
+    <pre id="result">等待重构…</pre>
+  </div>
+
+  <div class="card hidden" id="jobsCard">
+    <h2>③ 历史任务</h2>
+    <button onclick="loadJobs()">刷新</button>
+    <table><thead><tr><th>ID</th><th>目标栈</th><th>状态</th><th>消耗</th></tr></thead>
+    <tbody id="jobsBody"></tbody></table>
+  </div>
+</main>
+<script>
+const API = location.protocol + '//' + location.hostname + ':8000';
+let token = localStorage.getItem('l2m_token') || '';
+
+function hdr(){ return {'Content-Type':'application/json', ...(token?{'Authorization':'Bearer '+token}:{})}; }
+
+async function login(){
+  const email = document.getElementById('email').value.trim();
+  if(!email){ alert('请输入邮箱'); return; }
+  const r = await fetch(API+'/auth/register',{method:'POST',headers:hdr(),body:JSON.stringify({email})});
+  const d = await r.json();
+  if(!r.ok){ document.getElementById('loginMsg').textContent = d.detail||'登录失败'; return; }
+  token = d.token; localStorage.setItem('l2m_token',token);
+  document.getElementById('creditBadge').textContent = '点数：'+d.credits;
+  document.getElementById('loginMsg').textContent = '登录成功';
+  document.getElementById('refactorCard').classList.remove('hidden');
+  document.getElementById('jobsCard').classList.remove('hidden');
+}
+
+async function doRefactor(){
+  const btn = event.target; btn.disabled = true;
+  document.getElementById('refactorMsg').textContent='处理中…';
+  const r = await fetch(API+'/refactor',{method:'POST',headers:hdr(),body:JSON.stringify({
+    source_code: document.getElementById('code').value,
+    from_stack: document.getElementById('fromStack').value,
+    to_stack: document.getElementById('toStack').value
+  })});
+  const d = await r.json(); btn.disabled=false;
+  if(!r.ok){ document.getElementById('refactorMsg').textContent=d.detail||'失败'; return; }
+  document.getElementById('result').textContent=d.result;
+  document.getElementById('creditBadge').textContent='点数：'+d.credits_left;
+  document.getElementById('refactorMsg').textContent='完成';
+}
+
+async function loadJobs(){
+  const r = await fetch(API+'/jobs',{headers:hdr()});
+  const d = await r.json();
+  document.getElementById('jobsBody').innerHTML = d.map(j=>
+    `<tr><td>${j.id.slice(0,8)}</td><td>${j.target}</td><td>${j.status}</td><td>${j.cost}</td></tr>`).join('');
+}
+
+if(token){ document.getElementById('loginMsg').textContent='已保存 Token，可直接重构';
+  document.getElementById('refactorCard').classList.remove('hidden');
+  document.getElementById('jobsCard').classList.remove('hidden'); }
+</script>
+</body>
+</html>

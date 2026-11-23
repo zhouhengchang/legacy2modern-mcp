@@ -1,0 +1,42 @@
+name: Publish MCP Server
+
+# 打 tag（如 v0.2.0）推送后自动：发布 npm 包 → 发布到官方 MCP Registry
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Replace placeholders with repo owner
+        run: |
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          sed -i "s/REPLACEUSER/$OWNER/g" package.json server.json README.md
+          echo "namespace -> io.github.$OWNER/legacy2modern"
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_Linux_x86_64.tar.gz" | tar xz mcp-publisher
+          sudo mv mcp-publisher /usr/local/bin/
+
+      - name: Login & publish to MCP Registry
+        run: |
+          mcp-publisher login github --github-oidc
+          mcp-publisher publish

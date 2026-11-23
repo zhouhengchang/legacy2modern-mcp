@@ -1,0 +1,14 @@
+name = "legacy2modern-mcp"
+main = "src/worker.js"
+compatibility_date = "2026-01-01"
+
+# KV 命名空间：存放用户、点数、调用记录
+# 创建后把 id 填到下方（用户授权 wrangler 后自动创建，或用已存在的 id）
+[[kv_namespaces]]
+binding = "L2M"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+# 可选：自定义域名（DNS 验证后可用品牌命名空间 com.yourdomain/legacy2modern）
+# [[routes]]
+# pattern = "mcp.yourdomain.com"
+# zone_name = "yourdomain.com"

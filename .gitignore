@@ -1,0 +1,26 @@
+# 凭据文件，绝不提交
+.env
+publish/.env
+*.env
+
+# 依赖
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 日志与临时
+.logs/
+*.log
+.DS_Store
+
+# 构建产物
+dist/
+build/
+*.egg-info/
+
+# 数据库
+*.db
+*.sqlite
+*.sqlite3

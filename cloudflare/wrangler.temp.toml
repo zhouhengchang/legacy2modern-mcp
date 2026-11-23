@@ -1,0 +1,4 @@
+name = "legacy2modern-mcp"
+main = "src/worker-temp.js"
+compatibility_date = "2026-01-01"
+# 临时账户：无 KV 绑定，worker-temp.js 内置内存 KV 垫片
